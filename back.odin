@@ -1,13 +1,14 @@
 package back
 
 import "core:fmt"
+import "core:strings"
 import "core:io"
 import "core:os"
 import "base:runtime"
 import "core:text/table"
 
 // Size of a constant backtrace, as used by the allocator for example.
-BACKTRACE_SIZE :: #config(BACKTRACE_SIZE, 16)
+BACKTRACE_SIZE :: #config(BACKTRACE_SIZE, 32)
 
 // For targets that do not have native support (using debug info),
 // backtraces are done through instrumentation, Odin only allows one enter/exit instrumentation

@@ -8,6 +8,7 @@ import "core:os"
 import "base:runtime"
 import "core:sync"
 import "core:thread"
+import "core:strings"
 
 // The backtrace tracking allocator is the same allocator as the core tracking allocator but keeps
 // backtraces for each allocation.
@@ -188,6 +189,8 @@ Result_Type :: enum {
 tracking_allocator_print_results :: proc(t: ^Tracking_Allocator, type: Result_Type = .Both) {
 	context.allocator = t.internals_allocator
 
+	sync.mutex_guard(&t.mutex)
+
 	when ODIN_OS == .Windows && !ODIN_DEBUG {
 		if type == .Both || type == .Leaks {
 			for _, leak in t.allocation_map {
@@ -315,6 +318,7 @@ tracking_allocator_print_results :: proc(t: ^Tracking_Allocator, type: Result_Ty
 			defer li+=1
 
 			fmt.eprintf("\x1b[31m%v leaked %m\x1b[0m\n", leak.location, leak.size)
+			fmt.eprintln("[value]", leak.memory, strings.string_from_ptr(cast(^u8)leak.memory, leak.size))
 			fmt.eprintln("[back trace]")
 
 			work_leak := work_leaks[li]
@@ -324,8 +328,14 @@ tracking_allocator_print_results :: proc(t: ^Tracking_Allocator, type: Result_Ty
 				continue
 			}
 
-			print(work_leak.result)
-			fmt.eprintln()
+			// changed by me much simpler printing
+			for line in work_leak.result
+			{
+			    fmt.eprintln(line.location)
+			}
+
+			// print(work_leak.result)
+			// fmt.eprintln()
 		}
 
 		if len(t.bad_free_array) > 0 do fmt.eprintln()
