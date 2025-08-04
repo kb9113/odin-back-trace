@@ -10,6 +10,8 @@ import "core:sync"
 import "core:thread"
 import "core:strings"
 
+MAX_BACKTRACE_ITEMS :: 10
+
 // The backtrace tracking allocator is the same allocator as the core tracking allocator but keeps
 // backtraces for each allocation.
 //
@@ -269,12 +271,15 @@ tracking_allocator_print_results :: proc(t: ^Tracking_Allocator, type: Result_Ty
 		trace_count = len(t.bad_free_array)
 	}
 
+	trace_count = min(trace_count, MAX_BACKTRACE_ITEMS)
 	work := make([]Work, trace_count)
 	defer delete(work)
 
 	i: int
 	if type == .Both || type == .Leaks {
 		for _, leak in t.allocation_map {
+		    (i < trace_count) or_break
+
 			work[i].trace = leak.backtrace
 			i += 1
 		}
@@ -282,6 +287,8 @@ tracking_allocator_print_results :: proc(t: ^Tracking_Allocator, type: Result_Ty
 
 	if type == .Both || type == .Bad_Frees {
 		for bad_free in t.bad_free_array {
+		    (i < trace_count) or_break
+
 			work[i].trace   = bad_free.backtrace
 			i += 1
 		}
@@ -307,14 +314,15 @@ tracking_allocator_print_results :: proc(t: ^Tracking_Allocator, type: Result_Ty
 		worked += thread_work
 	}
 
-	thread_proc(&work, worked, len(work), &extra_threads_done)
+	thread_proc(&work, worked, len(work) , &extra_threads_done)
 	sync.wait_group_wait(&extra_threads_done)
 
 	if type == .Both || type == .Leaks {
-		work_leaks := work[:len(t.allocation_map)]
-		work = work[len(t.allocation_map):]
+		work_leaks := work[:min(MAX_BACKTRACE_ITEMS, len(t.allocation_map))]
+		work = work[min(MAX_BACKTRACE_ITEMS, len(t.allocation_map)):]
 		li: int
 		for _, leak in t.allocation_map {
+            (li < trace_count) or_break
 			defer li+=1
 
 			fmt.eprintf("\x1b[31m%v leaked %m\x1b[0m\n", leak.location, leak.size)
