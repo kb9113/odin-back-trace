@@ -10,7 +10,7 @@ import "core:sync"
 import "core:thread"
 import "core:strings"
 
-MAX_BACKTRACE_ITEMS :: 10
+MAX_BACKTRACE_ITEMS :: 100
 
 // The backtrace tracking allocator is the same allocator as the core tracking allocator but keeps
 // backtraces for each allocation.
